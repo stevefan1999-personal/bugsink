@@ -131,6 +131,7 @@ def _envbool(name, default="false"):
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = _envbool("BUGSINK_SESSION_SECURE", "true")
 CSRF_COOKIE_SECURE = _envbool("BUGSINK_CSRF_SECURE", "true")
+CSRF_TRUSTED_ORIGINS = ["https://%s" % _DOMAIN, "http://%s" % _DOMAIN]
 USE_X_REAL_IP = _envbool("BUGSINK_USE_X_REAL_IP", "false")
 USE_X_FORWARDED_FOR = _envbool("BUGSINK_USE_X_FWD_FOR", "false")
 X_FORWARDED_FOR_PROXY_COUNT = int(os.environ.get("BUGSINK_X_FWD_FOR_COUNT", "0"))
