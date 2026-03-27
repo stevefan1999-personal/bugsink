@@ -128,9 +128,9 @@ def _envbool(name, default="false"):
 # ---------------------------------------------------------------------------
 # SSL / proxy
 # ---------------------------------------------------------------------------
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = _envbool("BUGSINK_SESSION_SECURE", "true")
-CSRF_COOKIE_SECURE = _envbool("BUGSINK_CSRF_SECURE", "true")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if _envbool("BUGSINK_BEHIND_SSL_PROXY", "false") else None
+SESSION_COOKIE_SECURE = _envbool("BUGSINK_SESSION_SECURE", "false")
+CSRF_COOKIE_SECURE = _envbool("BUGSINK_CSRF_SECURE", "false")
 CSRF_TRUSTED_ORIGINS = ["https://%s" % _DOMAIN, "http://%s" % _DOMAIN]
 USE_X_REAL_IP = _envbool("BUGSINK_USE_X_REAL_IP", "false")
 USE_X_FORWARDED_FOR = _envbool("BUGSINK_USE_X_FWD_FOR", "false")

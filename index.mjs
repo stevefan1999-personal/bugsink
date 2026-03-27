@@ -150,7 +150,7 @@ const main = async () => {
     const proxy = createProxyServer({
         target: `http://127.0.0.1:${GUNICORN_PORT}`,
         ws: true,
-        xfwd: true,
+        xfwd: false,
         changeOrigin: false,
     });
 
