@@ -152,9 +152,6 @@ const main = async () => {
         ws: true,
         xfwd: true,
         changeOrigin: false,
-        headers: {
-            'X-Forwarded-Proto': 'https',
-        },
     });
 
     proxy.on('error', (err, req, res) => {
