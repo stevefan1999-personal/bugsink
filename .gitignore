@@ -53,3 +53,9 @@ node_modules
 
 # Docker artifacts
 /bugsink*tar
+
+# Passenger
+.passenger_init.lock
+.bugsink_secret_key
+/tmp/restart.txt
+/tmp/always_restart.txt
