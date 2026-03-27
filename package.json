@@ -2,8 +2,12 @@
   "name": "bugsink-proxy",
   "private": true,
   "type": "module",
-  "main": "app.mjs",
+  "main": "index.mjs",
+  "scripts": {
+    "postinstall": "bash setup-python.sh"
+  },
   "dependencies": {
-    "http-proxy-3": "^1.23.2"
+    "http-proxy-3": "^1.23.2",
+    "@manzt/uv": "*"
   }
 }

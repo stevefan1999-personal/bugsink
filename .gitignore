@@ -54,8 +54,9 @@ node_modules
 # Docker artifacts
 /bugsink*tar
 
-# Passenger
+# Passenger / cPanel
 .passenger_init.lock
 .bugsink_secret_key
+.pyenv/
 /tmp/restart.txt
 /tmp/always_restart.txt

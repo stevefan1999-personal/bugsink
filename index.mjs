@@ -25,29 +25,11 @@ const PID_FILE = join(TMP_DIR, 'gunicorn.pid');
 const SESSION_FILE = join(TMP_DIR, '.proxy_session');
 const RESTART_FILE = join(TMP_DIR, 'restart.txt');
 
-// Detect Python virtualenv — set PYTHON_VENV_BIN env var to override
-const VENV_BIN = (() => {
-    if (process.env.PYTHON_VENV_BIN) return process.env.PYTHON_VENV_BIN;
-    const home = process.env.HOME || `/home/${process.env.USER}`;
-    const relPath = relative(home, APP_DIR);
-    const venvBase = join(home, 'virtualenv', relPath);
-    console.error(`[bugsink] Scanning for virtualenv at: ${venvBase}`);
-    try {
-        const entries = readdirSync(venvBase).filter(v => /^\d/.test(v)).sort().reverse();
-        console.error(`[bugsink] Found versions: ${JSON.stringify(entries)}`);
-        if (entries.length > 0) return join(venvBase, entries[0], 'bin');
-    } catch (e) {
-        console.error(`[bugsink] Virtualenv scan failed: ${e.message}`);
-    }
-    return join(APP_DIR, 'venv', 'bin');
-})();
-console.error(`[bugsink] VENV_BIN: ${VENV_BIN}`);
-
-// Binary names — CloudLinux uses python3.13_bin instead of python
+// Python virtualenv — created by setup-python.sh (via uv from @manzt/uv)
+const VENV_BIN = process.env.PYTHON_VENV_BIN || join(APP_DIR, '.pyenv', 'bin');
 const PYTHON = process.env.PYTHON_BIN || join(VENV_BIN, 'python');
 const GUNICORN = process.env.GUNICORN_BIN || join(VENV_BIN, 'gunicorn');
 console.error(`[bugsink] PYTHON: ${PYTHON}`);
-console.error(`[bugsink] GUNICORN: ${GUNICORN}`);
 
 const ENV = {
     ...process.env,
