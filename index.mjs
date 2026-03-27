@@ -43,8 +43,11 @@ const VENV_BIN = (() => {
 })();
 console.error(`[bugsink] VENV_BIN: ${VENV_BIN}`);
 
-const PYTHON = join(VENV_BIN, 'python');
-const GUNICORN = join(VENV_BIN, 'gunicorn');
+// Binary names — CloudLinux uses python3.13_bin instead of python
+const PYTHON = process.env.PYTHON_BIN || join(VENV_BIN, 'python');
+const GUNICORN = process.env.GUNICORN_BIN || join(VENV_BIN, 'gunicorn');
+console.error(`[bugsink] PYTHON: ${PYTHON}`);
+console.error(`[bugsink] GUNICORN: ${GUNICORN}`);
 
 const ENV = {
     ...process.env,
