@@ -105,6 +105,10 @@ const saveSession = async () => {
 // at import time when gunicorn loads the WSGI application.
 
 const startGunicorn = async () => {
+    // Debug: check if critical env vars reach gunicorn
+    console.error(`[bugsink] ENV check: BUGSINK_DOMAIN=${ENV.BUGSINK_DOMAIN || 'NOT SET'}`);
+    console.error(`[bugsink] ENV check: BUGSINK_BEHIND_SSL_PROXY=${ENV.BUGSINK_BEHIND_SSL_PROXY || 'NOT SET'}`);
+    console.error(`[bugsink] ENV check: BUGSINK_SESSION_SECURE=${ENV.BUGSINK_SESSION_SECURE || 'NOT SET'}`);
     console.error(`[bugsink] Starting gunicorn on 127.0.0.1:${GUNICORN_PORT}...`);
 
     const child = spawn(GUNICORN, [
