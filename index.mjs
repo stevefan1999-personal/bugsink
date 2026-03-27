@@ -8,7 +8,7 @@
 //   - Application startup file: app.mjs
 //   - Run NPM Install (installs http-proxy-3)
 
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createProxyServer } from 'http-proxy-3';
 import { writeFile, readFile, unlink, access, stat, mkdir } from 'node:fs/promises';
 import { readdirSync, constants } from 'node:fs';
@@ -100,27 +100,9 @@ const saveSession = async () => {
     await writeFile(SESSION_FILE, timeToSave.toString());
 };
 
-// --- Step 1: Auto-init (migrations + superuser) ---
-
-const autoInit = () => {
-    console.error('[bugsink] Running auto-init...');
-    try {
-        execFileSync(PYTHON, ['manage.py', 'migrate', '--no-color'], {
-            cwd: APP_DIR, env: ENV, stdio: 'inherit', timeout: 120000,
-        });
-        execFileSync(PYTHON, ['manage.py', 'migrate', 'snappea', '--database=snappea', '--no-color'], {
-            cwd: APP_DIR, env: ENV, stdio: 'inherit', timeout: 60000,
-        });
-        execFileSync(PYTHON, ['manage.py', 'prestart'], {
-            cwd: APP_DIR, env: ENV, stdio: 'inherit', timeout: 30000,
-        });
-        console.error('[bugsink] Auto-init complete.');
-    } catch (err) {
-        console.error('[bugsink] Auto-init failed:', err.message);
-    }
-};
-
-// --- Step 2: Start gunicorn ---
+// --- Start gunicorn ---
+// Auto-init (migrations + superuser) is handled by passenger_wsgi.py
+// at import time when gunicorn loads the WSGI application.
 
 const startGunicorn = async () => {
     console.error(`[bugsink] Starting gunicorn on 127.0.0.1:${GUNICORN_PORT}...`);
@@ -130,7 +112,7 @@ const startGunicorn = async () => {
         '--workers', '2',
         '--access-logfile', '-',
         '--error-logfile', '-',
-        'bugsink.wsgi:application',
+        'passenger_wsgi:application',
     ], {
         cwd: APP_DIR,
         env: ENV,
@@ -156,7 +138,6 @@ const main = async () => {
     if (freshRestart) {
         await saveSession();
         await killGunicorn();
-        autoInit();
     }
 
     const existingPid = await getGunicornPid();
