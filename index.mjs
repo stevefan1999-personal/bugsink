@@ -9,7 +9,7 @@
 //   - Application startup file: index.mjs
 //   - Run NPM Install
 
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { createProxyServer } from 'http-proxy-3';
 import { readdirSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
@@ -29,6 +29,14 @@ const ENV = {
     ...process.env,
     DJANGO_SETTINGS_MODULE: 'bugsink.settings.passenger',
 };
+
+// Kill any orphaned gunicorn from previous runs
+try {
+    execFileSync('pkill', ['-9', '-f', 'gunicorn'], { stdio: 'ignore' });
+    console.error('[bugsink] Killed orphaned gunicorn processes');
+} catch {
+    // No gunicorn running — that's fine
+}
 
 // Debug
 console.error(`[bugsink] Node PID: ${process.pid}, PORT: ${PORT}`);
