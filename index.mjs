@@ -2,10 +2,21 @@
 // Based on the battle-tested Gitea proxy pattern.
 import { spawn, execSync } from 'node:child_process';
 import { createProxyServer } from 'http-proxy-3';
-import { writeFile, readFile, unlink, access, stat, mkdir } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { writeFile, readFile, unlink, access, stat, mkdir, appendFile } from 'node:fs/promises';
+import { constants, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// File-based logging — stderr may be swallowed by LiteSpeed
+const __dirname2 = dirname(fileURLToPath(import.meta.url));
+const LOG_FILE = join(__dirname2, 'bugsink.log');
+const log = (msg) => {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    process.stderr.write(line);
+    try { appendFileSync(LOG_FILE, line); } catch {}
+};
+
+log('=== index.mjs loaded ===');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -78,7 +89,7 @@ const getGunicornPid = async () => {
 const killGunicorn = async () => {
     const pid = await getGunicornPid();
     if (pid) {
-        console.error(`[bugsink] Killing tracked process (PID: ${pid})`);
+        log(`[bugsink] Killing tracked process (PID: ${pid})`);
         try {
             process.kill(pid, 'SIGTERM');
             await new Promise(r => setTimeout(r, 2000));
@@ -86,13 +97,13 @@ const killGunicorn = async () => {
                 process.kill(pid, 'SIGKILL');
             }
         } catch (e) {
-            console.error('[bugsink] Kill error:', e.message);
+            log('[bugsink] Kill error:', e.message);
         }
     }
 
     try {
         execSync('pkill -9 -f "gunicorn" 2>/dev/null || true', { stdio: 'ignore' });
-        console.error('[bugsink] Ran pkill to clean up orphaned processes');
+        log('[bugsink] Ran pkill to clean up orphaned processes');
     } catch {}
 
     await unlink(PID_FILE).catch(() => {});
@@ -101,9 +112,9 @@ const killGunicorn = async () => {
 
 // Start gunicorn
 const startGunicorn = async () => {
-    console.error('[bugsink] Starting gunicorn...');
-    console.error(`[bugsink] GUNICORN_BIN: ${GUNICORN_BIN}`);
-    console.error(`[bugsink] BUGSINK_DOMAIN: ${ENV.BUGSINK_DOMAIN || 'NOT SET'}`);
+    log('[bugsink] Starting gunicorn...');
+    log(`[bugsink] GUNICORN_BIN: ${GUNICORN_BIN}`);
+    log(`[bugsink] BUGSINK_DOMAIN: ${ENV.BUGSINK_DOMAIN || 'NOT SET'}`);
 
     const child = spawn(GUNICORN_BIN, [
         '--bind', `127.0.0.1:${GUNICORN_PORT}`,
@@ -119,7 +130,7 @@ const startGunicorn = async () => {
     });
 
     await writeFile(PID_FILE, child.pid.toString());
-    console.error(`[bugsink] Started with PID: ${child.pid}`);
+    log(`[bugsink] Started with PID: ${child.pid}`);
     child.unref();
 
     await new Promise(r => setTimeout(r, 3000));
@@ -130,26 +141,26 @@ const isFreshRestart = async () => {
     await ensureTmpDir();
 
     const currentRestartTime = await getRestartTime();
-    console.error(`[session] restart.txt mtime: ${currentRestartTime}`);
+    log(`[session] restart.txt mtime: ${currentRestartTime}`);
 
     try {
         if (await fileExists(SESSION_FILE)) {
             const sessionData = await readFile(SESSION_FILE, 'utf8');
             const lastRestartTime = parseFloat(sessionData.trim());
-            console.error(`[session] Last session mtime: ${lastRestartTime}`);
+            log(`[session] Last session mtime: ${lastRestartTime}`);
 
             if (currentRestartTime > lastRestartTime) {
-                console.error('[session] Fresh restart detected (restart.txt is newer)');
+                log('[session] Fresh restart detected (restart.txt is newer)');
                 return true;
             }
-            console.error('[session] Same session, not a fresh restart');
+            log('[session] Same session, not a fresh restart');
             return false;
         }
     } catch (e) {
-        console.error('[session] Error reading session:', e.message);
+        log('[session] Error reading session:', e.message);
     }
 
-    console.error('[session] No previous session file');
+    log('[session] No previous session file');
     return true;
 };
 
@@ -159,16 +170,16 @@ const saveSession = async () => {
     const restartTime = await getRestartTime();
     const timeToSave = restartTime || Date.now();
     await writeFile(SESSION_FILE, timeToSave.toString());
-    console.error(`[session] Saved session marker: ${timeToSave}`);
+    log(`[session] Saved session marker: ${timeToSave}`);
 };
 
 // Error handlers
-process.on('uncaughtException', (err) => console.error('[error] Uncaught:', err.message));
-process.on('unhandledRejection', (reason) => console.error('[error] Rejection:', reason));
+process.on('uncaughtException', (err) => log('[error] Uncaught:', err.message));
+process.on('unhandledRejection', (reason) => log('[error] Rejection:', reason));
 
 // Main
 const main = async () => {
-    console.error(`[proxy] Starting (Node PID: ${process.pid}, PORT: ${PORT})`);
+    log(`[proxy] Starting (Node PID: ${process.pid}, PORT: ${PORT})`);
 
     const freshRestart = await isFreshRestart();
 
@@ -183,7 +194,7 @@ const main = async () => {
     if (!existingPid) {
         await startGunicorn();
     } else {
-        console.error(`[bugsink] Already running (PID: ${existingPid})`);
+        log(`[bugsink] Already running (PID: ${existingPid})`);
     }
 
     // Create proxy
@@ -195,7 +206,7 @@ const main = async () => {
     });
 
     proxy.on('error', (err, req, res) => {
-        console.error('[proxy] Error:', err.message);
+        log('[proxy] Error:', err.message);
         if (res?.writeHead && !res.headersSent) {
             res.writeHead(502);
             res.end('Bad Gateway');
@@ -203,7 +214,7 @@ const main = async () => {
     });
 
     proxy.listen(PORT, () => {
-        console.error(`[proxy] Listening on ${PORT} -> ${GUNICORN_PORT}`);
+        log(`[proxy] Listening on ${PORT} -> ${GUNICORN_PORT}`);
     });
 };
 
